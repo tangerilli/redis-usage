@@ -121,6 +121,9 @@ func main() {
 	prefixes = prefixItems{}
 	keySizes := keySizeMap{}
 
+	errs_f, err := os.OpenFile("errors.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer errs_f.Close()
+
 	for {
 		keys, cursor, err = client.Scan(cursor, flagMatch, int64(flagCount)).Result()
 		check(err)
@@ -137,7 +140,10 @@ func main() {
 
 			if prefixes[prefix].numberOfDumps < flagDumpLimit {
 				result, err := client.Dump(key).Result()
-				check(err)
+                if err != nil {
+                    fmt.Fprintf(errs_f, "Error dumping %s", key)
+                    continue
+                }
 
 				keySizes[key] = len(result)
 				prefixes[prefix].totalBytes += len(result)
@@ -172,7 +178,7 @@ func main() {
 	printResults()
 
 
-	f, err := os.Create(fmt.Sprintf("./redis-prefixes-%s.csv", flagDB))
+	f, err := os.Create(fmt.Sprintf("./redis-prefixes-%d.csv", flagDB))
 	if err != nil {
 		panic(err)
 	}
@@ -186,7 +192,7 @@ func main() {
 	}
 	w.Flush()
 
-	f, err = os.Create(fmt.Sprintf("./redis-keys-%s.csv", flagDB))
+	f, err = os.Create(fmt.Sprintf("./redis-keys-%d.csv", flagDB))
 	if err != nil {
 		panic(err)
 	}
