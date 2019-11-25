@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/go-redis/redis"
@@ -221,6 +222,9 @@ func newClient() *redis.Client {
 
 	return redis.NewClient(&redis.Options{
 		Addr:        addr,
+		TLSConfig: &tls.Config{
+		    InsecureSkipVerify: true,	
+		},
         Password:    flagPassword,
 		DB:          flagDB,
 		ReadTimeout: time.Duration(flagTimeout) * time.Millisecond,
