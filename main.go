@@ -172,7 +172,7 @@ func main() {
 	printResults()
 
 
-	f, err := os.Create("./redis-prefixes.csv")
+	f, err := os.Create(fmt.Sprintf("./redis-prefixes-%s.csv", flagDB))
 	if err != nil {
 		panic(err)
 	}
@@ -186,7 +186,7 @@ func main() {
 	}
 	w.Flush()
 
-	f, err = os.Create("./redis-keys.csv")
+	f, err = os.Create(fmt.Sprintf("./redis-keys-%s.csv", flagDB))
 	if err != nil {
 		panic(err)
 	}
