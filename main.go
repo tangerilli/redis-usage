@@ -2,11 +2,13 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"github.com/go-redis/redis"
 	"log"
 	"gopkg.in/cheggaaa/pb.v1"
+	"os"
 	"strings"
 	"time"
 	"sort"
@@ -34,6 +36,8 @@ var (
 )
 
 type prefixItems map[string]*prefixItem
+type keySizeMap map[string]int
+
 
 func (items prefixItems) sortedSlice() []*prefixItem {
 	// Pull all items out of the map
@@ -115,6 +119,7 @@ func main() {
 	var keys []string
 
 	prefixes = prefixItems{}
+	keySizes := keySizeMap{}
 
 	for {
 		keys, cursor, err = client.Scan(cursor, flagMatch, int64(flagCount)).Result()
@@ -134,6 +139,7 @@ func main() {
 				result, err := client.Dump(key).Result()
 				check(err)
 
+				keySizes[key] = len(result)
 				prefixes[prefix].totalBytes += len(result)
 				prefixes[prefix].numberOfDumps += 1
 			}
@@ -164,6 +170,34 @@ func main() {
 	bar.FinishPrint("")
 
 	printResults()
+
+
+	f, err := os.Create("./redis-prefixes.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	w := csv.NewWriter(f)
+	for _, data := range prefixes.sortedSlice() {
+		if data.numberOfDumps > 0 {
+			record := []string{data.prefix, fmt.Sprintf("%d", data.count), fmt.Sprintf("%d", data.estimatedSize())}
+			w.Write(record)
+		}
+	}
+	w.Flush()
+
+	f, err = os.Create("./redis-keys.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	w = csv.NewWriter(f)
+	for key, size := range keySizes {
+		record := []string{key, fmt.Sprintf("%d", size)}
+		w.Write(record)
+	}
+	w.Flush()
+
 }
 
 func printResults() {
